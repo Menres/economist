@@ -1,0 +1,799 @@
+Я вставлю код из файлов index.php и process.php с подробными комментариями к каждой строке, чтобы новичок мог понять, что делает каждая часть кода и зачем она нужна. Комментарии будут добавлены непосредственно в код, чтобы всё было максимально наглядно. Мы начнем с index.php, а затем перейдем к process.php.
+
+Файл index.php с комментариями
+Этот файл отвечает за отображение главной страницы веб-приложения, где пользователь может загрузить файл с данными (Excel, Word, CSV), выбрать параметры и создать PDF или экспортировать данные в CSV.
+
+php
+
+Свернуть
+
+Перенос
+
+Копировать
+<?php
+// Устанавливаем заголовок HTTP-ответа, чтобы браузер знал, что это HTML-страница с кодировкой UTF-8 (для корректного отображения русских букв)
+header('Content-Type: text/html; charset=UTF-8');
+?>
+
+<!DOCTYPE html>
+<!-- Объявляем тип документа — HTML5, это стандарт для современных веб-страниц -->
+<html lang="ru">
+<!-- Открываем тег <html> и указываем, что основной язык страницы — русский (lang="ru"), это помогает поисковикам и программам экранного чтения -->
+<head>
+    <!-- Указываем кодировку страницы — UTF-8, чтобы русские буквы отображались корректно -->
+    <meta charset="UTF-8">
+    <!-- Настраиваем отображение страницы на мобильных устройствах: ширина равна ширине экрана, масштаб 1:1 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Задаем заголовок страницы, который отображается на вкладке браузера -->
+    <title>Зарплатный лист - Бухгалтерия Про</title>
+    <!-- Подключаем стили Bootstrap 5.3.0 через CDN — это готовый CSS-фреймворк для красивого оформления -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Подключаем шрифт Roboto (с начертаниями 400 и 700) из Google Fonts для улучшения дизайна текста -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Начинаем секцию пользовательских стилей CSS -->
+    <style>
+        /* Задаем стиль для всей страницы: серый фон и шрифт Roboto */
+        body { background-color: #E8ECEF; font-family: 'Roboto', sans-serif; }
+        /* Ограничиваем ширину контейнера до 700px и добавляем отступ сверху */
+        .container { max-width: 700px; margin-top: 30px; }
+        /* Стили для заголовка: синий фон, белый текст, отступы, скругленные углы сверху */
+        .header { background-color: #003087; color: #FFFFFF; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+        /* Добавляем небольшой отступ между параграфами в заголовке */
+        .header p { margin: 5px 0; }
+        /* Стили для элемента с текущим временем: уменьшаем размер шрифта и задаем светлый цвет */
+        #current-time { font-size: 0.9em; color: #E8ECEF; }
+        /* Делаем само время (внутри <span>) жирным */
+        #current-time span { font-weight: 700; }
+        /* Стили для карточки с формой: белый фон, скругленные углы снизу, тень, отступы */
+        .card { background-color: #FFFFFF; border-radius: 0 0 10px 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 30px; }
+        /* Стили для кнопки "Создать PDF": золотой фон, без границы, жирный текст */
+        .btn-primary { background-color: #D4A017; border: none; font-weight: 700; }
+        /* Цвет кнопки "Создать PDF" при наведении: чуть темнее золотой */
+        .btn-primary:hover { background-color: #b38b14; }
+        /* Стили для кнопки "Экспорт в 1С": синий фон, без границы, жирный текст */
+        .btn-secondary { background-color: #003087; border: none; font-weight: 700; }
+        /* Цвет кнопки "Экспорт в 1С" при наведении: чуть темнее синий */
+        .btn-secondary:hover { background-color: #00205b; }
+        /* Стили для меток формы: жирный текст, синий цвет */
+        .form-label { font-weight: 700; color: #003087; }
+        /* Добавляем отступ снизу для сообщений об ошибках */
+        .alert { margin-bottom: 20px; }
+        /* Скрываем спиннер (индикатор загрузки) по умолчанию */
+        .spinner { display: none; }
+        /* Стили для таблицы в модальном окне: задаем ширину столбцов */
+        #exampleModal .table th:nth-child(1), #exampleModal .table td:nth-child(1) { width: 12%; } /* Период */
+        #exampleModal .table th:nth-child(2), #exampleModal .table td:nth-child(2) { width: 25%; } /* ФИО */
+        #exampleModal .table th:nth-child(3), #exampleModal .table td:nth-child(3) { width: 20%; } /* Должность */
+        #exampleModal .table th:nth-child(4), #exampleModal .table td:nth-child(4) { width: 10%; } /* Оклад */
+        #exampleModal .table th:nth-child(5), #exampleModal .table td:nth-child(5) { width: 10%; } /* Налог */
+        #exampleModal .table th:nth-child(6), #exampleModal .table td:nth-child(6) { width: 10%; } /* Премии */
+        #exampleModal .table th:nth-child(7), #exampleModal .table td:nth-child(7) { width: 13%; } /* Итого */
+    </style>
+</head>
+<body>
+    <!-- Создаем контейнер для содержимого страницы, который центрирует элементы -->
+    <div class="container">
+        <!-- Заголовок страницы: синий блок с текстом -->
+        <div class="header">
+            <!-- Заголовок "Бухгалтерия Про" -->
+            <h1>Бухгалтерия Про</h1>
+            <!-- Подзаголовок "Создание зарплатных листов" -->
+            <p>Создание зарплатных листов</p>
+            <!-- Элемент для отображения текущего времени, будет обновляться JavaScript -->
+            <p id="current-time">Текущее время: <span>00:00:00</span></p>
+        </div>
+        <!-- Карточка с формой для загрузки данных -->
+        <div class="card">
+            <!-- Заголовок внутри карточки -->
+            <h3 class="mb-4">Загрузите данные</h3>
+            <!-- Проверяем, есть ли ошибка в URL (например, ?error=Сообщение), и если есть — показываем её -->
+            <?php if (isset($_GET['error'])): ?>
+                <!-- Сообщение об ошибке в красном блоке (Bootstrap класс alert-danger) -->
+                <div class="alert alert-danger" role="alert">
+                    <!-- Выводим сообщение об ошибке, экранируя специальные символы для безопасности -->
+                    <?php echo htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+            <?php endif; ?>
+            <!-- Форма для загрузки данных, отправляет данные в process.php методом POST -->
+            <form action="process.php" method="post" enctype="multipart/form-data" id="uploadForm">
+                <!-- Поле для выбора периода отчётности -->
+                <div class="mb-3">
+                    <!-- Метка для поля -->
+                    <label for="reportPeriod" class="form-label">Выберите период отчётности</label>
+                    <!-- Поле ввода типа "month" для выбора месяца и года, по умолчанию — текущий месяц -->
+                    <input type="month" class="form-control" id="reportPeriod" name="reportPeriod" value="<?php echo date('Y-m'); ?>" required>
+                </div>
+                <!-- Поле для выбора шаблона PDF -->
+                <div class="mb-3">
+                    <!-- Метка для поля -->
+                    <label for="template" class="form-label">Шаблон PDF</label>
+                    <!-- Выпадающий список с тремя вариантами шаблонов -->
+                    <select class="form-control" id="template" name="template">
+                        <option value="classic">Классический</option>
+                        <option value="modern">Современный</option>
+                        <option value="minimal">Минималистичный</option>
+                    </select>
+                </div>
+                <!-- Поле для загрузки сертификата для цифровой подписи -->
+                <div class="mb-3">
+                    <!-- Метка для поля -->
+                    <label for="certificate" class="form-label">Сертификат для цифровой подписи (.p12 файл)</label>
+                    <!-- Поле для загрузки файла, принимает только файлы .p12 -->
+                    <input type="file" class="form-control" id="certificate" name="certificate" accept=".p12">
+                    <!-- Подсказка, что это поле необязательное -->
+                    <small class="form-text text-muted">Оставьте пустым, если подпись не нужна.</small>
+                </div>
+                <!-- Поле для ввода максимального оклада -->
+                <div class="mb-3">
+                    <!-- Метка для поля -->
+                    <label for="salaryLimit" class="form-label">Максимальный оклад для уведомления</label>
+                    <!-- Поле ввода числа, по умолчанию 100000 -->
+                    <input type="number" class="form-control" id="salaryLimit" name="salaryLimit" min="0" value="100000">
+                </div>
+                <!-- Поле для загрузки файла с данными -->
+                <div class="mb-3">
+                    <!-- Метка для поля -->
+                    <label for="file" class="form-label">Выберите Excel, Word или CSV файл</label>
+                    <!-- Поле для загрузки файла, принимает только файлы .xlsx, .xls, .docx, .csv, обязательное -->
+                    <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls,.docx,.csv" required>
+                    <!-- Подсказка о формате файла и ссылка на пример -->
+                    <small class="form-text text-muted">
+                        Поддерживаемые форматы: .xlsx, .xls, .docx, .csv. Файл должен содержать таблицу с 7 колонками: Период (в формате ГГГГ-ММ, например, 2025-04), ФИО, Должность, Оклад, Налог, Премии, Итого.
+                        <!-- Ссылка для открытия модального окна с примером таблицы -->
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#exampleModal">Посмотреть пример</a>
+                    </small>
+                </div>
+                <!-- Скрытое поле для передачи действия (какая кнопка была нажата) -->
+                <input type="hidden" name="action" id="formAction" value="">
+                <!-- Контейнер для двух кнопок -->
+                <div class="d-flex gap-2">
+                    <!-- Кнопка для создания PDF -->
+                    <button type="submit" class="btn btn-primary w-50" id="createPdfBtn">Создать PDF</button>
+                    <!-- Кнопка для экспорта в CSV -->
+                    <button type="submit" class="btn btn-secondary w-50" id="exportCsvBtn">Экспорт в 1С (CSV)</button>
+                </div>
+                <!-- Спиннер (индикатор загрузки), показывается во время отправки формы -->
+                <div class="spinner mt-3 text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно для отображения примера таблицы -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <!-- Контейнер модального окна с увеличенной шириной (modal-lg) -->
+        <div class="modal-dialog modal-lg">
+            <!-- Содержимое модального окна -->
+            <div class="modal-content">
+                <!-- Заголовок модального окна -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Пример таблицы</h5>
+                    <!-- Кнопка для закрытия модального окна -->
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <!-- Тело модального окна с таблицей -->
+                <div class="modal-body">
+                    <!-- Таблица с примерами данных -->
+                    <table class="table table-bordered">
+                        <!-- Заголовки таблицы -->
+                        <thead>
+                            <tr>
+                                <th>Период</th>
+                                <th>ФИО</th>
+                                <th>Должность</th>
+                                <th>Оклад</th>
+                                <th>Налог</th>
+                                <th>Премии</th>
+                                <th>Итого</th>
+                            </tr>
+                        </thead>
+                        <!-- Данные таблицы -->
+                        <tbody>
+                            <tr>
+                                <td>2025-04</td>
+                                <td>Иванов Иван Иванович</td>
+                                <td>Бухгалтер</td>
+                                <td>50000</td>
+                                <td>6500</td>
+                                <td>5000</td>
+                                <td>48500</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Нижняя часть модального окна с кнопкой -->
+                <div class="modal-footer">
+                    <!-- Кнопка для закрытия модального окна -->
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем JavaScript Bootstrap для работы модального окна, форм и других интерактивных элементов -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Начинаем пользовательский JavaScript -->
+    <script>
+        // Находим элементы формы и кнопок по их ID
+        const form = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('file');
+        const createPdfBtn = document.getElementById('createPdfBtn');
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        const formAction = document.getElementById('formAction');
+        const spinner = document.querySelector('.spinner');
+
+        // Добавляем обработчик события на отправку формы
+        form.addEventListener('submit', function(e) {
+            // Проверяем, выбран ли файл
+            const file = fileInput.files[0];
+            if (file) {
+                // Задаем максимальный размер файла — 10 МБ
+                const maxSize = 10 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    // Если файл слишком большой, отменяем отправку формы и показываем предупреждение
+                    e.preventDefault();
+                    alert('Файл слишком большой. Максимальный размер: 10 МБ.');
+                    return;
+                }
+                // Проверяем расширение файла
+                const validExtensions = ['xlsx', 'xls', 'docx', 'csv'];
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (!validExtensions.includes(ext)) {
+                    // Если расширение не поддерживается, отменяем отправку и показываем предупреждение
+                    e.preventDefault();
+                    alert('Неподдерживаемый формат файла. Выберите .xlsx, .xls, .docx или .csv.');
+                    return;
+                }
+            }
+            // Отключаем кнопки и показываем спиннер во время отправки
+            createPdfBtn.disabled = true;
+            exportCsvBtn.disabled = true;
+            spinner.style.display = 'block';
+        });
+
+        // Добавляем обработчик на кнопку "Создать PDF"
+        createPdfBtn.addEventListener('click', function() {
+            // Устанавливаем значение скрытого поля action для отправки в process.php
+            formAction.value = 'create_pdf';
+        });
+
+        // Добавляем обработчик на кнопку "Экспорт в 1С"
+        exportCsvBtn.addEventListener('click', function() {
+            // Устанавливаем значение скрытого поля action для отправки в process.php
+            formAction.value = 'export_csv';
+        });
+
+        // После отправки формы сбрасываем её
+        form.addEventListener('submit', function() {
+            setTimeout(() => {
+                // Сбрасываем форму
+                this.reset();
+                // Включаем кнопки обратно
+                createPdfBtn.disabled = false;
+                exportCsvBtn.disabled = false;
+                // Скрываем спиннер
+                spinner.style.display = 'none';
+            }, 100);
+        });
+
+        // Если в URL есть параметр error, убираем его из адресной строки
+        if (window.location.search.includes('error=')) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        // Функция для обновления текущего времени
+        function updateTime() {
+            const now = new Date(); // Получаем текущую дату и время
+            const hours = String(now.getHours()).padStart(2, '0'); // Получаем часы и добавляем ведущий ноль
+            const minutes = String(now.getMinutes()).padStart(2, '0'); // Получаем минуты и добавляем ведущий ноль
+            const seconds = String(now.getSeconds()).padStart(2, '0'); // Получаем секунды и добавляем ведущий ноль
+            const timeString = `${hours}:${minutes}:${seconds}`; // Формируем строку времени
+            // Обновляем элемент с ID current-time
+            document.getElementById('current-time').innerHTML = `Текущее время: <span>${timeString}</span>`;
+        }
+
+        // Вызываем функцию updateTime сразу при загрузке страницы
+        updateTime();
+
+        // Обновляем время каждую секунду
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>
+Файл process.php с комментариями
+Этот файл обрабатывает данные, которые пользователь отправил через форму в index.php. Он может либо создать PDF-документ, либо экспортировать данные в CSV.
+
+php
+
+Свернуть
+
+Перенос
+
+Копировать
+<?php
+// Включаем отображение ошибок PHP для отладки (удобно при разработке)
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Подключаем библиотеки из Composer (для работы с Excel, Word и PDF)
+require 'vendor/autoload.php';
+
+// Подключаем классы для работы с Excel и Word
+use PhpOffice\PhpSpreadsheet\IOFactory as SpreadsheetIO;
+use PhpOffice\PhpWord\IOFactory as WordIO;
+
+// Функция для перенаправления с ошибкой
+function redirectWithError($message) {
+    // Перенаправляем на index.php с параметром error, содержащим сообщение об ошибке
+    header('Location: index.php?error=' . urlencode($message));
+    exit; // Завершаем выполнение скрипта
+}
+
+// Функция для транслитерации русских букв в английские (для создания безопасных имен файлов)
+function transliterate($string) {
+    // Массив соответствий русских букв английским
+    $translit = [
+        'А' => 'A', 'Б' => 'B', 'В' => 'V', 'Г' => 'G', 'Д' => 'D', 'Е' => 'E', 'Ё' => 'Yo', 'Ж' => 'Zh',
+        'З' => 'Z', 'И' => 'I', 'Й' => 'Y', 'К' => 'K', 'Л' => 'L', 'М' => 'M', 'Н' => 'N', 'О' => 'O',
+        'П' => 'P', 'Р' => 'R', 'С' => 'S', 'Т' => 'T', 'У' => 'U', 'Ф' => 'F', 'Х' => 'Kh', 'Ц' => 'Ts',
+        'Ч' => 'Ch', 'Ш' => 'Sh', 'Щ' => 'Shch', 'Ъ' => '', 'Ы' => 'Y', 'Ь' => '', 'Э' => 'E', 'Ю' => 'Yu',
+        'Я' => 'Ya',
+        'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'е' => 'e', 'ё' => 'yo', 'ж' => 'zh',
+        'з' => 'z', 'и' => 'i', 'й' => 'y', 'к' => 'k', 'л' => 'l', 'м' => 'm', 'н' => 'n', 'о' => 'o',
+        'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u', 'ф' => 'f', 'х' => 'kh', 'ц' => 'ts',
+        'ч' => 'ch', 'ш' => 'sh', 'щ' => 'shch', 'ъ' => '', 'ы' => 'y', 'ь' => '', 'э' => 'e', 'ю' => 'yu',
+        'я' => 'ya'
+    ];
+    // Заменяем русские буквы на английские
+    $string = strtr($string, $translit);
+    // Заменяем все символы, кроме букв и цифр, на подчеркивания
+    $string = preg_replace('/[^A-Za-z0-9]/', '_', $string);
+    // Убираем лишние подчеркивания
+    $string = preg_replace('/_+/', '_', $string);
+    // Убираем подчеркивания в начале и конце строки
+    return trim($string, '_');
+}
+
+// Проверяем, существуют ли папки uploads и output, и создаем их, если их нет
+if (!file_exists('uploads')) mkdir('uploads', 0777, true); // Папка для загруженных файлов
+if (!file_exists('output')) mkdir('output', 0777, true); // Папка для созданных файлов (PDF, CSV)
+
+// Проверяем, доступны ли папки для записи
+if (!is_writable('output') || !is_writable('uploads')) {
+    redirectWithError("Директория output или uploads не доступна для записи.");
+}
+
+// Проверяем, был ли загружен файл
+if (!isset($_FILES['file']) || $_FILES['file']['error'] != UPLOAD_ERR_OK) {
+    redirectWithError("Ошибка загрузки файла.");
+}
+
+// Получаем информацию о загруженном файле
+$file = $_FILES['file']['tmp_name']; // Временный путь к файлу
+$fileName = $_FILES['file']['name']; // Имя файла
+$ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION)); // Расширение файла в нижнем регистре
+$uploadPath = 'uploads/' . uniqid() . '.' . $ext; // Новый путь для файла с уникальным именем
+
+// Перемещаем загруженный файл в папку uploads
+if (!move_uploaded_file($file, $uploadPath)) {
+    redirectWithError("Ошибка при сохранении файла.");
+}
+
+// Получаем период отчётности из формы, если не указан — используем текущий месяц
+$reportPeriod = isset($_POST['reportPeriod']) ? $_POST['reportPeriod'] : date('Y-m');
+// Создаем объект DateTime для работы с датой
+$periodDate = new DateTime($reportPeriod);
+// Массив для перевода месяцев с английского на русский
+$months = [
+    'January' => 'Январь', 'February' => 'Февраль', 'March' => 'Март', 'April' => 'Апрель',
+    'May' => 'Май', 'June' => 'Июнь', 'July' => 'Июль', 'August' => 'Август',
+    'September' => 'Сентябрь', 'October' => 'Октябрь', 'November' => 'Ноябрь', 'December' => 'Декабрь'
+];
+// Получаем название месяца на английском
+$monthEng = $periodDate->format('F');
+// Переводим месяц на русский
+$monthRus = $months[$monthEng];
+// Формируем строку периода (например, "Апрель 2025")
+$formattedPeriod = $monthRus . ' ' . $periodDate->format('Y');
+
+// Если файл имеет расширение .doc, конвертируем его в .docx
+if ($ext === 'doc') {
+    $convertedPath = 'uploads/' . uniqid() . '.docx'; // Путь для конвертированного файла
+    $sofficePath = '"C:\Program Files\LibreOffice\program\soffice.exe"'; // Путь к LibreOffice
+    // Формируем команду для конвертации
+    $command = "unoconv -f docx --sofficepath $sofficePath " . escapeshellarg($uploadPath) . " " . escapeshellarg($convertedPath);
+    // Выполняем команду
+    exec($command, $output, $returnVar);
+    // Проверяем, успешно ли прошла конвертация
+    if ($returnVar !== 0 || !file_exists($convertedPath)) {
+        unlink($uploadPath); // Удаляем исходный файл
+        redirectWithError("Не удалось конвертировать .doc в .docx.");
+    }
+    unlink($uploadPath); // Удаляем исходный файл
+    $uploadPath = $convertedPath; // Обновляем путь к файлу
+    $ext = 'docx'; // Обновляем расширение
+}
+
+// Массив для хранения данных из файла
+$data = [];
+// Обрабатываем Excel-файлы (.xlsx, .xls)
+if (in_array($ext, ['xlsx', 'xls'])) {
+    try {
+        // Загружаем файл с помощью PhpSpreadsheet
+        $spreadsheet = SpreadsheetIO::load($uploadPath);
+        $sheet = $spreadsheet->getActiveSheet(); // Получаем активный лист
+        // Проходим по всем строкам листа
+        foreach ($sheet->getRowIterator() as $row) {
+            $rowData = []; // Массив для данных строки
+            // Проходим по всем ячейкам строки
+            foreach ($row->getCellIterator() as $cell) {
+                // Преобразуем значение ячейки в строку и убираем пробелы
+                $rowData[] = trim(mb_convert_encoding((string)$cell->getValue(), 'UTF-8', 'auto'));
+            }
+            // Если строка не пустая, добавляем её в массив данных
+            if (!empty(array_filter($rowData, fn($value) => $value !== '' && $value !== null))) {
+                $data[] = $rowData;
+            }
+        }
+    } catch (Exception $e) {
+        unlink($uploadPath); // Удаляем загруженный файл
+        redirectWithError("Ошибка чтения Excel файла: " . $e->getMessage());
+    }
+// Обрабатываем Word-файлы (.docx)
+} elseif ($ext === 'docx') {
+    try {
+        // Загружаем файл с помощью PhpWord
+        $phpWord = WordIO::load($uploadPath);
+        $textLines = []; // Массив для хранения текста, если нет таблицы
+        // Функция для извлечения текста из элементов документа
+        function extractTextFromElement($element, &$textLines) {
+            if (method_exists($element, 'getElements')) {
+                foreach ($element->getElements() as $subElement) {
+                    extractTextFromElement($subElement, $textLines);
+                }
+            }
+            if (get_class($element) === 'PhpOffice\PhpWord\Element\TextRun' || get_class($element) === 'PhpOffice\PhpWord\Element\Text') {
+                $text = get_class($element) === 'PhpOffice\PhpWord\Element\TextRun' ?
+                    implode('', array_map(fn($e) => $e->getText(), $element->getElements())) : $element->getText();
+                $text = trim((string)$text);
+                if ($text !== '') $textLines[] = $text;
+            }
+        }
+
+        $tableFound = false; // Флаг, нашли ли таблицу
+        // Проходим по всем секциям документа
+        foreach ($phpWord->getSections() as $section) {
+            // Проходим по всем элементам секции
+            foreach ($section->getElements() as $element) {
+                // Если элемент — таблица
+                if (get_class($element) === 'PhpOffice\PhpWord\Element\Table') {
+                    $tableFound = true;
+                    // Проходим по строкам таблицы
+                    foreach ($element->getRows() as $row) {
+                        $rowData = []; // Массив для данных строки
+                        // Проходим по ячейкам строки
+                        foreach ($row->getCells() as $cell) {
+                            $text = '';
+                            // Извлекаем текст из ячейки
+                            foreach ($cell->getElements() as $cellElement) {
+                                if (method_exists($cellElement, 'getText')) $text .= $cellElement->getText();
+                            }
+                            $rowData[] = trim(mb_convert_encoding($text, 'UTF-8', 'auto'));
+                        }
+                        // Если строка не пустая, добавляем её в массив данных
+                        if (!empty(array_filter($rowData, fn($value) => $value !== '' && $value !== null))) {
+                            $data[] = $rowData;
+                        }
+                    }
+                } else {
+                    // Если это не таблица, извлекаем текст
+                    extractTextFromElement($element, $textLines);
+                }
+            }
+        }
+
+        // Если таблица не найдена, пытаемся извлечь данные из текста
+        if (!$tableFound && !empty($textLines)) {
+            $fullText = implode("\n", $textLines);
+            $lines = array_filter(array_map('trim', explode("\n", $fullText)));
+            foreach ($lines as $line) {
+                $rowData = array_map('trim', preg_split('/[\s\t,;]+/', $line));
+                if (count($rowData) >= 7) {
+                    $rowData = array_map(fn($item) => mb_convert_encoding($item, 'UTF-8', 'auto'), $rowData);
+                    $data[] = $rowData;
+                }
+            }
+        }
+
+        // Если данные не найдены, показываем ошибку
+        if (empty($data)) {
+            unlink($uploadPath);
+            redirectWithError("Word-документ пуст или не содержит данных.");
+        }
+    } catch (Exception $e) {
+        unlink($uploadPath);
+        redirectWithError("Ошибка чтения Word файла: " . $e->getMessage());
+    }
+// Обрабатываем CSV-файлы
+} elseif ($ext === 'csv') {
+    try {
+        // Открываем CSV-файл для чтения
+        $fileHandle = fopen($uploadPath, 'r');
+        if ($fileHandle === false) {
+            unlink($uploadPath);
+            redirectWithError("Не удалось открыть CSV-файл.");
+        }
+        // Читаем файл построчно
+        while (($row = fgetcsv($fileHandle, 0, ',')) !== false) {
+            // Преобразуем данные в UTF-8 и убираем пробелы
+            $row = array_map(fn($item) => trim(mb_convert_encoding((string)$item, 'UTF-8', 'auto')), $row);
+            // Если строка не пустая, добавляем её в массив данных
+            if (!empty(array_filter($row, fn($value) => $value !== '' && $value !== null))) {
+                $data[] = $row;
+            }
+        }
+        fclose($fileHandle); // Закрываем файл
+    } catch (Exception $e) {
+        unlink($uploadPath);
+        redirectWithError("Ошибка чтения CSV файла: " . $e->getMessage());
+    }
+// Если формат файла не поддерживается
+} else {
+    unlink($uploadPath);
+    redirectWithError("Неподдерживаемый формат файла.");
+}
+
+// Проверяем, есть ли данные в файле
+if (empty($data)) {
+    unlink($uploadPath);
+    redirectWithError("Файл пустой или не содержит данных.");
+}
+
+// Извлекаем первую строку как заголовки
+$header = array_shift($data);
+// Оставшиеся строки — это данные о сотрудниках
+$employees = $data;
+
+// Проверяем, что в таблице ровно 7 колонок
+if (empty($header) || count($header) !== 7) {
+    unlink($uploadPath);
+    redirectWithError("Файл должен содержать 7 колонок: Период, ФИО, Должность, Оклад, Налог, Премии, Итого.");
+}
+
+// Проверяем данные в каждой строке
+foreach ($employees as $row) {
+    // Проверяем формат столбца "Период" (должен быть ГГГГ-ММ)
+    if (!isset($row[0]) || !preg_match('/^\d{4}-\d{2}$/', $row[0])) {
+        unlink($uploadPath);
+        redirectWithError("Неверный формат периода в строке: " . $row[1] . ". Ожидается ГГГГ-ММ, например, 2025-04.");
+    }
+    // Проверяем, что числовые данные (Оклад, Налог, Премии, Итого) — это положительные числа
+    if (!is_numeric($row[3]) || $row[3] < 0 || !is_numeric($row[4]) || $row[4] < 0 ||
+        !is_numeric($row[5]) || $row[5] < 0 || !is_numeric($row[6]) || $row[6] < 0) {
+        unlink($uploadPath);
+        redirectWithError("Числовые данные должны быть положительными. Ошибка в строке: " . $row[1]);
+    }
+}
+
+// Фильтруем строки по выбранному периоду
+$filteredEmployees = array_filter($employees, function($row) use ($reportPeriod) {
+    return isset($row[0]) && $row[0] === $reportPeriod;
+});
+
+// Если нет данных за выбранный период, показываем ошибку
+if (empty($filteredEmployees)) {
+    unlink($uploadPath);
+    redirectWithError("В таблице нет данных за выбранный период: $formattedPeriod.");
+}
+
+$employees = $filteredEmployees;
+
+// Удаляем столбец "Период" из данных, так как он больше не нужен
+$employees = array_map(function($row) {
+    return array_slice($row, 1, 6); // Убираем первый столбец (Период), оставляем 6 столбцов
+}, $employees);
+$header = array_slice($header, 1, 6); // Убираем "Период" из заголовков
+
+// Проверяем, какая кнопка была нажата (Создать PDF или Экспорт в 1С)
+$action = $_POST['action'] ?? 'create_pdf';
+
+// Если выбрано "Экспорт в 1С" (CSV)
+if ($action === 'export_csv') {
+    // Формируем содержимое CSV-файла
+    $csvContent = "ФИО,Должность,Оклад,Налог,Премии,Итого\n";
+    foreach ($employees as $row) {
+        $csvContent .= implode(',', $row) . "\n";
+    }
+    // Сохраняем CSV-файл
+    $csvPath = __DIR__ . '/output/export_1c_' . uniqid() . '.csv';
+    file_put_contents($csvPath, $csvContent);
+    // Отправляем файл пользователю
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="export_1c.csv"');
+    readfile($csvPath);
+    // Удаляем временные файлы
+    unlink($csvPath);
+    unlink($uploadPath);
+    exit;
+}
+
+// Если выбрано "Создать PDF"
+if ($action === 'create_pdf') {
+    // Проверяем, доступен ли класс TCPDF для создания PDF
+    if (!class_exists('TCPDF')) {
+        unlink($uploadPath);
+        redirectWithError("Класс TCPDF не найден.");
+    }
+
+    try {
+        // Создаем новый PDF-документ
+        $pdf = new \TCPDF();
+        $pdf->SetCreator(PDF_CREATOR); // Устанавливаем создателя документа
+        $pdf->SetAuthor('Бухгалтерия Про'); // Устанавливаем автора
+        $pdf->SetTitle('Зарплатный лист'); // Устанавливаем заголовок документа
+
+        // Выбираем шаблон PDF
+        $template = $_POST['template'] ?? 'classic';
+        if ($template === 'modern') {
+            $pdf->SetFont('dejavusans', '', 12); // Шрифт DejaVu Sans, размер 12
+            $pdf->SetFillColor(50, 50, 50); // Цвет заливки заголовков (темно-серый)
+            $pdf->SetMargins(15, 25, 15); // Отступы
+        } elseif ($template === 'minimal') {
+            $pdf->SetFont('dejavusans', '', 10); // Шрифт DejaVu Sans, размер 10
+            $pdf->SetFillColor(200, 200, 200); // Цвет заливки заголовков (светло-серый)
+            $pdf->SetMargins(10, 10, 10); // Отступы
+        } else {
+            $pdf->SetFont('dejavusans', '', 11); // Шрифт DejaVu Sans, размер 11
+            $pdf->SetFillColor(0, 48, 135); // Цвет заливки заголовков (синий)
+            $pdf->SetMargins(15, 20, 15); // Отступы
+        }
+
+        // Если загружен сертификат для цифровой подписи
+        if (isset($_FILES['certificate']) && $_FILES['certificate']['error'] === UPLOAD_ERR_OK) {
+            $certPath = 'uploads/' . uniqid() . '.p12'; // Путь для сертификата
+            move_uploaded_file($_FILES['certificate']['tmp_name'], $certPath); // Перемещаем сертификат
+            // Устанавливаем подпись для PDF
+            $pdf->setSignature('file://' . $certPath, 'file://' . $certPath, 'password', '', 2, []);
+        }
+
+        // Добавляем страницу в PDF
+        $pdf->AddPage();
+        $pdf->SetTextColor(255, 255, 255); // Белый цвет текста
+        $pdf->Cell(0, 10, 'Бухгалтерия Про', 0, 1, 'L', 1); // Добавляем текст "Бухгалтерия Про"
+        $pdf->SetTextColor(0, 0, 0); // Черный цвет текста
+        $pdf->SetFont('', 'B', 16); // Жирный шрифт, размер 16
+        $pdf->Cell(0, 10, 'Зарплатный лист', 0, 1, 'C'); // Заголовок "Зарплатный лист"
+        $pdf->SetFont('', '', 10); // Обычный шрифт, размер 10
+        $pdf->Cell(0, 5, 'Период: ' . $formattedPeriod, 0, 1, 'L'); // Период (например, "Апрель 2025")
+        $pdf->Cell(0, 5, 'Дата: ' . date('d.m.Y'), 0, 1, 'L'); // Текущая дата
+        $pdf->Ln(10); // Пропускаем 10 единиц вниз
+
+        // Получаем максимальный оклад для уведомления из формы
+        $salaryLimit = isset($_POST['salaryLimit']) ? floatval($_POST['salaryLimit']) : 100000;
+
+        // Начинаем создание таблицы
+        $pdf->SetXY(15, $pdf->GetY()); // Устанавливаем позицию таблицы
+        $pdf->SetFillColor(212, 160, 23); // Золотой цвет заливки заголовков
+        $pdf->SetFont('', 'B', 10); // Жирный шрифт, размер 10
+
+        // Задаем начальную ширину столбцов
+        $widths = [60, 40, 15, 8, 8, 15];
+        $maxWidths = $widths;
+        // Вычисляем максимальную ширину столбцов на основе содержимого
+        foreach ($employees as $row) {
+            foreach ($row as $i => $col) {
+                $textWidth = $pdf->GetStringWidth($col) + 4;
+                $maxWidths[$i] = max($maxWidths[$i], $textWidth);
+            }
+        }
+        foreach ($header as $i => $col) {
+            $textWidth = $pdf->GetStringWidth($col) + 4;
+            $maxWidths[$i] = max($maxWidths[$i], $textWidth);
+        }
+
+        // Ограничиваем ширину таблицы, чтобы она помещалась на странице
+        $totalWidth = array_sum($maxWidths);
+        $pageWidth = $pdf->getPageWidth() - 30;
+        if ($totalWidth > $pageWidth) {
+            $scale = $pageWidth / $totalWidth;
+            $maxWidths = array_map(fn($w) => $w * $scale, $maxWidths);
+        }
+
+        // Добавляем заголовки таблицы
+        foreach ($header as $i => $col) {
+            $pdf->Cell($maxWidths[$i], 7, $col, 1, 0, 'C', 1);
+        }
+        $pdf->Ln(); // Переходим на новую строку
+        $pdf->SetFont('', '', 10); // Обычный шрифт, размер 10
+
+        // Добавляем данные таблицы
+        foreach ($employees as $row) {
+            // Проверяем, превышает ли оклад лимит
+            $isOverLimit = floatval($row[2]) > $salaryLimit;
+            if ($isOverLimit) $pdf->SetTextColor(255, 0, 0); // Красный цвет для превышения
+            $maxHeight = 6; // Начальная высота строки
+            // Вычисляем максимальную высоту строки
+            foreach ($row as $i => $col) {
+                $numLines = $pdf->getNumLines($col, $maxWidths[$i]);
+                $cellHeight = 6 * $numLines;
+                $maxHeight = max($maxHeight, $cellHeight);
+            }
+            // Добавляем ячейки строки
+            foreach ($row as $i => $col) {
+                $align = ($i === 0 || $i === 1) ? 'L' : 'R'; // ФИО и Должность — слева, числа — справа
+                $pdf->MultiCell($maxWidths[$i], $maxHeight, $col, 1, $align, 0, 0, '', '', true, 2);
+            }
+            $pdf->Ln($maxHeight); // Переходим на новую строку
+            $pdf->SetTextColor(0, 0, 0); // Возвращаем черный цвет текста
+        }
+
+        // Добавляем итоги под таблицей
+        $pdf->Ln(10);
+        $pdf->SetFont('', 'B', 10);
+        $totalSalary = array_sum(array_column($employees, 2)); // Сумма окладов
+        $totalTax = array_sum(array_column($employees, 3)); // Сумма налогов
+        $totalBonuses = array_sum(array_column($employees, 4)); // Сумма премий
+        $total = array_sum(array_column($employees, 5)); // Общая сумма
+        $pdf->Cell(0, 7, "Итого начислено:", 0, 1, 'L');
+        $pdf->SetFont('', '', 10);
+        $pdf->Cell(0, 7, "На руки: $totalSalary руб.", 0, 1, 'L');
+        $pdf->Cell(0, 7, "Налог: $totalTax руб.", 0, 1, 'L');
+        $pdf->Cell(0, 7, "Премии: $totalBonuses руб.", 0, 1, 'L');
+        $pdf->Cell(0, 7, "Итого выплачено: $total руб.", 0, 1, 'L');
+
+        // Итог к выплате
+        $pdf->Ln(15);
+        $pdf->SetFont('', 'B', 12);
+        $pdf->Cell(0, 7, "Итого к выплате: {$total} руб.", 'B', 1, 'R');
+
+        // Место для подписей
+        $pdf->Ln(40);
+        $pdf->SetFont('', '', 10);
+        $pdf->Cell(90, 7, 'Руководитель предприятия: ____________________', 0, 0, 'L');
+        $pdf->Cell(90, 7, 'Главный бухгалтер: ____________________', 0, 1, 'R');
+
+        // Сохраняем PDF-файл
+        $outputPath = __DIR__ . '/output/payslip_' . uniqid() . '.pdf';
+        $pdf->Output($outputPath, 'F');
+    } catch (Exception $e) {
+        unlink($uploadPath);
+        redirectWithError("Ошибка генерации PDF: " . $e->getMessage());
+    }
+
+    // Отправляем PDF-файл пользователю
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="payslip.pdf"');
+    readfile($outputPath);
+    // Удаляем временные файлы
+    unlink($outputPath);
+    unlink($uploadPath);
+    exit;
+}
+
+// Если действие неизвестно, показываем ошибку
+unlink($uploadPath);
+redirectWithError("Неизвестное действие.");
+?>
+Как это всё работает вместе
+Пользователь заходит на index.php:
+Видит форму, где может выбрать период, шаблон PDF, загрузить сертификат, задать максимальный оклад и загрузить файл.
+В заголовке отображается текущее время, обновляющееся каждую секунду.
+Пользователь может посмотреть пример таблицы, нажав на ссылку "Посмотреть пример".
+Пользователь отправляет форму:
+Форма отправляется в process.php методом POST.
+JavaScript проверяет размер файла и его расширение перед отправкой.
+Если пользователь нажал "Создать PDF", то formAction.value становится 'create_pdf'. Если "Экспорт в 1С", то 'export_csv'.
+process.php обрабатывает данные:
+Загружает файл и проверяет его формат.
+Извлекает данные из файла (Excel, Word, CSV).
+Проверяет, что данные соответствуют требованиям (7 столбцов, правильный формат периода, положительные числа).
+Фильтрует данные по выбранному периоду.
+Если выбрано "Экспорт в 1С", создает CSV-файл и отправляет его пользователю.
+Если выбрано "Создать PDF", создает PDF-документ с таблицей, итогами и подписями, и отправляет его пользователю.
+После обработки:
+Все временные файлы удаляются.
+Пользователь получает либо PDF, либо CSV, либо перенаправляется на index.php с сообщением об ошибке.

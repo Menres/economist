@@ -1,0 +1,16 @@
+{
+    "name": "menres/myproject",
+    "version": "1.0.0",
+    "description": "A project to process Excel and Word files and generate PDF payslips",
+    "require": {
+        "phpoffice/phpspreadsheet": "^1.29",
+        "phpoffice/phpword": "^1.1",
+        "tecnickcom/tcpdf": "^6.7"
+    },
+    "authors": [
+        {
+            "name": "т",
+            "email": "example@example.com"
+        }
+    ]
+}
